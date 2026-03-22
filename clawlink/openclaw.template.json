@@ -1,0 +1,23 @@
+{
+  // ClawLink Brain Node — Local LLM via Ollama 연동 설정 템플릿
+  // 브랜치: llm/ollama  (Phase 4, Mac Studio M4/M5)
+  agents: {
+    defaults: {
+      model: {
+        primary: "ollama/qwen2.5-coder",
+        fallbacks: ["ollama/llama3.2"]
+      }
+    }
+  },
+  models: {
+    providers: {
+      ollama: {
+        baseUrl: "http://localhost:11434",
+        api: "ollama"
+      }
+    }
+  },
+  gateway: {
+    port: 18789
+  }
+}
