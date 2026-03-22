@@ -1,0 +1,18 @@
+{
+  // ClawLink Brain Node — Anthropic Claude 연동 설정 템플릿
+  // 브랜치: llm/claude
+  agents: {
+    defaults: {
+      model: {
+        primary: "anthropic/claude-sonnet-4-6",
+        fallbacks: ["anthropic/claude-haiku-4-5"]
+      }
+    }
+  },
+  env: {
+    ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+  },
+  gateway: {
+    port: 18789
+  }
+}
