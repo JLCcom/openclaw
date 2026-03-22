@@ -1,0 +1,32 @@
+{
+  // ClawLink Brain Node — Z.AI GLM 기본 설정 템플릿
+  // 브랜치: llm/zai-glm
+  //
+  // 사용법:
+  //   1. 이 파일을 ~/.openclaw/openclaw.json 으로 복사
+  //   2. ZAI_API_KEY 환경변수를 설정하거나 아래 env.ZAI_API_KEY 에 직접 입력
+  //   3. Brain 컨테이너 실행: docker compose -f docker-compose.brain.yml up -d
+  //
+  // 환경변수 주입 (권장):
+  //   docker compose -f docker-compose.brain.yml up -d -e ZAI_API_KEY=sk-...
+
+  // LLM 설정
+  agents: {
+    defaults: {
+      model: {
+        primary: "zai/glm-4.7",          // Z.AI GLM-4.7-Flash (Phase 1 기본값)
+        fallbacks: ["zai/glm-5"]          // 응답 실패 시 GLM-5로 폴백
+      }
+    }
+  },
+
+  // API 키 — 환경변수 참조 (직접 입력 금지)
+  env: {
+    ZAI_API_KEY: "${ZAI_API_KEY}"
+  },
+
+  // Gateway 설정
+  gateway: {
+    port: 18789                            // ClawLink 표준 포트
+  }
+}
