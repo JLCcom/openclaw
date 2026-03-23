@@ -1,0 +1,65 @@
+# syntax=docker/dockerfile:1.7
+#
+# ClawLink Brain용 OpenClaw tarball 빌드
+#
+# clawlink Brain Docker 런타임(node:24-bookworm-slim)과 동일한 환경에서
+# 빌드하여 호환성을 보장한다.
+#
+# 사용법:
+#   docker build -f Dockerfile.brain-pack -o dist/brain .
+#
+# 결과물:
+#   dist/brain/openclaw-<version>.tgz
+#
+# GitHub Release에 업로드 후 clawlink Brain Dockerfile에서:
+#   curl -fsSL <tarball-url> -o /tmp/openclaw.tgz
+#   npm install -g /tmp/openclaw.tgz
+
+FROM node:24-bookworm AS build
+
+# Bun (빌드 스크립트 의존)
+RUN set -eux; \
+    for attempt in 1 2 3 4 5; do \
+      if curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL https://bun.sh/install | bash; then \
+        break; \
+      fi; \
+      if [ "$attempt" -eq 5 ]; then exit 1; fi; \
+      sleep $((attempt * 2)); \
+    done
+ENV PATH="/root/.bun/bin:${PATH}"
+
+RUN corepack enable
+
+WORKDIR /app
+
+# 의존성 레이어 (캐시 최적화)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY ui/package.json ./ui/package.json
+COPY patches ./patches
+COPY extensions ./extensions
+
+RUN --mount=type=cache,id=openclaw-brain-pnpm-store,target=/root/.local/share/pnpm/store,sharing=locked \
+    NODE_OPTIONS=--max-old-space-size=2048 pnpm install --frozen-lockfile
+
+COPY . .
+
+# 빌드
+RUN pnpm canvas:a2ui:bundle || \
+    (echo "A2UI bundle: creating stub (non-fatal)" && \
+     mkdir -p src/canvas-host/a2ui && \
+     echo "/* A2UI bundle unavailable */" > src/canvas-host/a2ui/a2ui.bundle.js && \
+     echo "stub" > src/canvas-host/a2ui/.bundle.hash)
+
+RUN pnpm build:docker
+
+# Brain은 gateway만 실행하므로 UI 빌드 불필요 (pnpm ui:build 생략)
+
+# tarball 생성 (prepack 훅이 build+ui:build를 재실행하므로 스크립트 비활성화)
+RUN mkdir -p /out && npm pack --pack-destination /out --ignore-scripts
+
+# dev 의존성 제거 (tarball에는 영향 없음, 이미지 정리용)
+RUN CI=true pnpm prune --prod
+
+# 결과물만 추출
+FROM scratch
+COPY --from=build /out/openclaw-*.tgz /
